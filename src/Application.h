@@ -4,16 +4,18 @@
  * DESCRIPTION: Header file of all classes pertaining to the Application Layer (Revised 2020)
  **********************************/
 
-#ifndef _APPLICATION_H_
-#define _APPLICATION_H_
+#pragma once
 
-#include "stdincludes.h"
+#include "IMember.h"
 #include "MP1Node.h"
 #include "Log.h"
 #include "Params.h"
 #include "Member.h"
 #include "EmulNet.h"
 #include "Queue.h"
+#include "Address.h"
+
+#include <sstream>
 
 /**
  * global variables
@@ -38,7 +40,7 @@ private:
 	char JOINADDR[30];
 	EmulNet *en;
     Log *log;
-	MP1Node **mp1;
+	IMember **mp1;
 	Params *par;
 public:
 	Application(char *);
@@ -50,4 +52,3 @@ public:
 	void fail();
 };
 
-#endif /* _APPLICATION_H__ */

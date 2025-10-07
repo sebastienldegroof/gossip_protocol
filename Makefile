@@ -12,7 +12,7 @@ CXXFLAGS     = -Wall -Wno-format-security -g -std=c++11
 TARGET_EXEC := Application
 SRC_DIR     := ./src
 
-SRCS := $(wildcard src/*.cpp)
+SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 OBJS := $(patsubst %.c, %.o, $(SRCS))
 
 $(TARGET_EXEC): $(OBJS)
@@ -26,4 +26,4 @@ $(TARGET_EXEC): $(OBJS)
 clean:
 	find . -type f -name '*.o' -delete
 	find . -type f -name '*.log' -delete
-	rm Application
+	rm $(TARGET_EXEC)

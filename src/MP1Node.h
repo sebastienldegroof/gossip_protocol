@@ -7,9 +7,9 @@
  *  Starter code template
  **********************************/
 
-#ifndef _MP1NODE_H_
-#define _MP1NODE_H_
+#pragma once
 
+#include "IMember.h"
 #include "stdincludes.h"
 #include "Log.h"
 #include "Params.h"
@@ -148,7 +148,7 @@ public:
  *
  * DESCRIPTION: Class implementing Membership protocol functionalities for failure detection
  */
-class MP1Node
+class MP1Node: public IMember
 {
 private:
 	EmulNet *emulNet;
@@ -169,7 +169,7 @@ public:
 	MP1Node(Params *params, EmulNet *emul, Log *log, Address *address);
 	MP1Node(Member *member, Params *params, EmulNet *emul, Log *log, Address *address);
 	Member *getMemberNode() { return memberNode; }
-	virtual ~MP1Node();
+	~MP1Node();
 
 	// node operations
 	void nodeStart(char *servaddrstr, short serverport);
@@ -179,7 +179,7 @@ public:
 	int finishUpThisNode();
 	int recvLoop();
 	static int enqueueWrapper(void *env, char *buff, int size);
-	void nodeLoop();
+	int nodeLoop();
 	void checkMessages();
 	void nodeLoopOps();
 
@@ -214,6 +214,8 @@ public:
 	int isNullAddress(Address &);
 	Address getJoinAddress();
 	void printAddress(Address &);
+	bool isFailed() const;
+	void setFailed(bool);
+	Address getAddress() const;
 };
 
-#endif /*_MP1NODE_H_*/

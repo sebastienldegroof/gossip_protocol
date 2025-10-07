@@ -109,6 +109,14 @@ void Log::LOG(Address *addr, const char * str, ...) {
 
 }
 
+void Log::LOG(Address addr, const char * str) {
+	LOG(&addr, str);
+}
+
+void Log::LOG(Address addr, const char * str, int i) {
+	LOG(&addr, str, i);
+}
+
 /**
  * FUNCTION NAME: logNodeAdd
  *

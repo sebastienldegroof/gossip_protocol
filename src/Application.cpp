@@ -51,7 +51,7 @@ Application::Application(char *infile) {
 	par->setparams(infile);
 	log = new Log(par);
 	en = new EmulNet(par);
-	mp1 = (MP1Node **) malloc(par->EN_GPSZ * sizeof(MP1Node *));
+	mp1 = (IMember **) malloc(par->EN_GPSZ * sizeof(IMember *));
 
 	/*
 	 * Init all nodes
@@ -62,7 +62,7 @@ Application::Application(char *infile) {
 		joinaddr = getjoinaddr();
 		addressOfMemberNode = (Address *) en->ENinit(addressOfMemberNode, par->PORTNUM);
 		mp1[i] = new MP1Node(par, en, log, addressOfMemberNode);
-		log->LOG(&(mp1[i]->getMemberNode()->addr), "APP");
+		log->LOG(mp1[i]->getAddress(), "APP");
 		delete addressOfMemberNode;
 	}
 }
@@ -139,7 +139,7 @@ void Application::mp1Run() {
 		/*
 		 * Receive messages from the network and queue them in the membership protocol queue
 		 */
-		if( par->getcurrtime() > (int)(par->STEP_RATE*i) && !(mp1[i]->getMemberNode()->bFailed) ) {
+		if( par->getcurrtime() > (int)(par->STEP_RATE*i) && !(mp1[i]->isFailed()) ) {
 			// Receive messages from the network and queue them
 			mp1[i]->recvLoop();
 		}
@@ -154,20 +154,20 @@ void Application::mp1Run() {
 		 */
 		if( par->getcurrtime() == (int)(par->STEP_RATE*i) ) {
 			// introduce the ith node into the system at time STEPRATE*i
-			mp1[i]->nodeStart(JOINADDR, par->PORTNUM);
-			cout<<i<<"-th introduced node is assigned with the address: "<<mp1[i]->getMemberNode()->addr.getAddress() << endl;
+			mp1[i]->nodeStart(JOINADDR, par->PORTNUM);\
+			cout<<i<<"-th introduced node is assigned with the address: "<<mp1[i]->getAddress().toString() << endl;
 			nodeCount += i;
 		}
 
 		/*
 		 * Handle all the messages in your queue and send heartbeats
 		 */
-		else if( par->getcurrtime() > (int)(par->STEP_RATE*i) && !(mp1[i]->getMemberNode()->bFailed) ) {
+		else if( par->getcurrtime() > (int)(par->STEP_RATE*i) && !(mp1[i]->isFailed()) ) {
 			// handle messages and send heartbeats
 			mp1[i]->nodeLoop();
 			#ifdef DEBUGLOG
 			if( (i == 0) && (par->globaltime % 500 == 0) ) {
-				log->LOG(&mp1[i]->getMemberNode()->addr, "@@time=%d", par->getcurrtime());
+				log->LOG(mp1[i]->getAddress(), "@@time=%d", par->getcurrtime());
 			}
 			#endif
 		}
@@ -193,17 +193,17 @@ void Application::fail() {
 	if( par->SINGLE_FAILURE && par->getcurrtime() == 100 ) {
 		removed = (rand() % par->EN_GPSZ);
 		#ifdef DEBUGLOG
-		log->LOG(&mp1[removed]->getMemberNode()->addr, "Node failed at time=%d", par->getcurrtime());
+		log->LOG(mp1[removed]->getAddress(), "Node failed at time=%d", par->getcurrtime());
 		#endif
-		mp1[removed]->getMemberNode()->bFailed = true;
+		mp1[removed]->setFailed(true);
 	}
 	else if( par->getcurrtime() == 100 ) {
 		removed = rand() % par->EN_GPSZ/2;
 		for ( i = removed; i < removed + par->EN_GPSZ/2; i++ ) {
 			#ifdef DEBUGLOG
-			log->LOG(&mp1[i]->getMemberNode()->addr, "Node failed at time = %d", par->getcurrtime());
+			log->LOG(mp1[i]->getAddress(), "Node failed at time = %d", par->getcurrtime());
 			#endif
-			mp1[i]->getMemberNode()->bFailed = true;
+			mp1[i]->setFailed(true);
 		}
 	}
 

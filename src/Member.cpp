@@ -4,40 +4,15 @@
  * DESCRIPTION: Definition of all Member related class (Revised 2020)
  **********************************/
 
+#include <vector>
+#include <queue>
+#include <utility>
 #include "Member.h"
 
 /**
  * Constructor
  */
 q_elt::q_elt(void *elt, int size): elt(elt), size(size) {}
-
-/**
- * Copy constructor
- */
-Address::Address(const Address &anotherAddress) {
-	// strcpy(addr, anotherAddress.addr);
-	memcpy(&addr, &anotherAddress.addr, sizeof(addr));
-}
-
-/**
- * Assignment operator overloading
- */
-Address& Address::operator=(const Address& anotherAddress) {
-	// strcpy(addr, anotherAddress.addr);
-	memcpy(&addr, &anotherAddress.addr, sizeof(addr));
-	return *this;
-}
-
-/**
- * Compare two Address objects
- */
-bool Address::operator==(const Address& anotherAddress) const {
-	return 0==memcmp(this->addr, anotherAddress.addr, sizeof(this->addr));
-}
-
-bool Address::operator!=(const Address& anotherAddress) const {
-	return 0!=memcmp(this->addr, anotherAddress.addr, sizeof(this->addr));
-}
 
 /**
  * Constructor
@@ -64,10 +39,10 @@ MemberListEntry::MemberListEntry(const MemberListEntry &anotherMLE) {
  */
 MemberListEntry& MemberListEntry::operator =(const MemberListEntry &anotherMLE) {
 	MemberListEntry temp(anotherMLE);
-	swap(heartbeat, temp.heartbeat);
-	swap(id, temp.id);
-	swap(port, temp.port);
-	swap(timestamp, temp.timestamp);
+	std::swap(heartbeat, temp.heartbeat);
+	std::swap(id, temp.id);
+	std::swap(port, temp.port);
+	std::swap(timestamp, temp.timestamp);
 	return *this;
 }
 

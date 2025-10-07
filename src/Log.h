@@ -35,6 +35,8 @@ public:
 	Log& operator = (const Log &anotherLog);
 	virtual ~Log();
 	void LOG(Address *, const char * str, ...);
+	void LOG(Address, const char * str);
+	void LOG(Address, const char * str, int);
 	void logNodeAdd(Address *, Address *);
 	void logNodeRemove(Address *, Address *);
 };

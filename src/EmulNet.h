@@ -14,6 +14,7 @@
 #include "stdincludes.h"
 #include "Params.h"
 #include "Member.h"
+#include "Address.h"
 
 using namespace std;
 

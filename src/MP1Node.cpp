@@ -218,11 +218,11 @@ int MP1Node::enqueueWrapper(void *env, char *buff, int size)
  * DESCRIPTION: Executed periodically at each member
  * Check your messages in queue and perform membership protocol duties
  */
-void MP1Node::nodeLoop()
+int MP1Node::nodeLoop()
 {
     if (memberNode->bFailed)
     {
-        return;
+        return 0;
     }
 
     // Check my messages
@@ -231,13 +231,13 @@ void MP1Node::nodeLoop()
     // Wait until you're in the group...
     if (!memberNode->inGroup)
     {
-        return;
+        return 0;
     }
 
     // ...then jump in and share your responsibilites!
     nodeLoopOps();
 
-    return;
+    return 0;
 }
 
 /**
@@ -1198,6 +1198,21 @@ void MP1Node::printAddress(Address &addr)
            addr.addr[3], *(short *)&addr.addr[4]);
 }
 
+bool MP1Node::isFailed() const
+{
+    return memberNode->bFailed;
+}
+
+void MP1Node::setFailed(bool nFailed)
+{
+    memberNode->bFailed = nFailed;
+}
+
+Address MP1Node::getAddress() const
+{
+    return memberNode->addr;
+}
+
 /**
  * STRUCT NAME: MessageHdr
  */
@@ -1631,7 +1646,7 @@ void UpdateBuffer::cleanupBuffer()
                   if (a.first.nodeAddress == b.first.nodeAddress)
                       return a.first.timestamp > b.first.timestamp;
                   else
-                      return a.first.nodeAddress.getAddress() < b.first.nodeAddress.getAddress();
+                      return a.first.nodeAddress.toString() < b.first.nodeAddress.toString();
               });
 
     std::vector<std::pair<UpdateMsg, short>> newBuffer;

@@ -1,49 +1,28 @@
 
-# MP1 README - Membership Protocol
+# SWIM-style Membership/Gossip Protocol
+## Description
 
-## Basic tips
+Based on the MP1 assignment in the CS425 Distributed Systems course taught by the brilliant Professor Indy Gupta at the Univeristy of Illinois Urbana-Champaign.
 
-Read the specification document thoroughly on Coursera.
+## How to build the application
 
-Create a high level design covering all scenarios / test cases before you start coding.
-
-## How to submit for grading
-
-To submit your work for autograding on the server, you need to generate a fresh submission token from the Coursera assignment web page. It's a text string you can copy and paste. Then, you need to run the submission script from your workspace directory:
-
+In your CLI:
 ```
-python3 ./submit.py
+make
 ```
 
-It will ask you to enter your Coursera email address and the submission token.
-
-## Local testing
-
-### How do I test if my code passes all the test cases ?
-
-Run the grader. Tests are initiated with `Tester.sh`. You can run this test suite locally like this:
+## Local testing suite
 
 ```
-$ chmod +x Tester.sh
-$ ./Tester.sh
+./Tester.sh
 ```
 
-### How do I run the CRUD tests separately?
-
-First, compile your project:
+## Individual tests
 
 ```
-$ make clean
-$ make
-```
-
-Then use one of these invocations:
-
-```
-$ ./Application ./testcases/create.conf
-$ ./Application ./testcases/delete.conf
-$ ./Application ./testcases/read.conf
-$ ./Application ./testcases/update.conf
+./Application ./testcases/singlefailure.conf
+./Application ./testcases/multifailure.conf
+./Application ./testcases/msgdropsinglefailure.conf
 ```
 
 You may need to do `make clean && make` in between tests to make sure you have a clean run.
