@@ -10,12 +10,15 @@
 #pragma once
 
 #include "IMember.h"
-#include "stdincludes.h"
+#include "Message.h"
+#include "UpdateBuffer.h"
+#include "Constants.h"
 #include "Log.h"
 #include "Params.h"
 #include "Member.h"
 #include "EmulNet.h"
 #include "Queue.h"
+
 #include <unordered_set>
 
 /**
@@ -23,125 +26,6 @@
  */
 #define TREMOVE 20
 #define TFAIL 5
-
-
-/**
- * Message data structures
- */
-
-/**
- * Message Types
- */
-enum MsgType
-{
-	JOINREQ,
-	JOINACK,
-	PINGREQ,
-	PINGACK,
-};
-
-/**
- *  Member states
- */
-enum MemberState
-{
-	ALIVE,
-	SUSPECT,
-	FAIL,
-};
-
-/**
- * STRUCT NAME: UpdateMsg
- *
- * DESCRIPTION: Piggybacked update messages. Contains
- * the node's address, state, and timestamp of the recorded
- * state.
- */
-
-struct UpdateMsg
-{
-	Address nodeAddress;
-	MemberState nodeState;
-	long timestamp;
-
-	UpdateMsg(Address &, MemberState, long);
-	UpdateMsg(Address &);
-	UpdateMsg();
-	~UpdateMsg();
-	UpdateMsg(const UpdateMsg &);				// copy constructor
-	UpdateMsg &operator=(const UpdateMsg &);	// copy assignment operator
-	UpdateMsg(UpdateMsg &&) noexcept;			// move constructor
-	UpdateMsg &operator=(UpdateMsg &) noexcept; // move assignment operator
-	bool operator==(const UpdateMsg &) const;   // equality operator
-	bool operator!=(const UpdateMsg &) const;   // inequality operator
-	int msgSize();
-	void serialize(char *, int);
-};
-
-/**
- * STRUCT NAME: MessageHdr
- *
- * DESCRIPTION: Header and content of a message. Header contains
- * the message addressees, the type of the message, the timestamp of when
- * it was sent, and the number of attached updates. The content of the
- * message in contained in the array of UpdateMsg objects.
- */
-struct MessageHdr
-{
-	Address srcAddr;
-	Address dstAddr;
-	MsgType msgType;
-	long timestamp;
-	int updateCount;
-	UpdateMsg *piggyBack;
-
-	MessageHdr(Address &, Address &, MsgType, long, int);
-	MessageHdr(char *, int);
-	MessageHdr(int);
-	MessageHdr();
-	~MessageHdr();
-	MessageHdr(const MessageHdr &);				  // copy constructor
-	MessageHdr &operator=(const MessageHdr &);	  // copy assignment operator
-	MessageHdr(MessageHdr &&) noexcept;			  // move constructor
-	MessageHdr &operator=(MessageHdr &) noexcept; // move assignment operator
-	int msgSize();
-	void serialize(char *, int);
-};
-
-/**
- * CLASS NAME: UpdateBuffer
- *
- * DESCRIPTION: Maintains an ordered list of updates that
- * need to be piggybacked. This class holds the logic that
- * determines how many and what updates should be piggybacked
- * on a message.
- *
- * Oldest updates are sent first and purged when they have been
- * sent more than the maxSent threshold.
- */
-class UpdateBuffer
-{
-private:
-	int maxUpdates;
-	int maxSent;
-	std::vector<std::pair<UpdateMsg,short>> updateBuffer;
-
-public:
-	UpdateBuffer();
-	UpdateBuffer(int);
-	UpdateBuffer(int, int);
-	UpdateBuffer(const UpdateBuffer &);				  // copy constructor
-	UpdateBuffer &operator=(const UpdateBuffer &);	  // copy assignment operator
-	UpdateBuffer(UpdateBuffer &&) noexcept;			  // move constructor
-	UpdateBuffer &operator=(UpdateBuffer &) noexcept; // move assignment operator
-	int getUpdateCount();
-	void insertUpdate(UpdateMsg);
-	void insertUpdatesFromMsg(MessageHdr &);
-	bool contains(UpdateMsg &msg);
-	UpdateMsg at(int);
-	std::vector<UpdateMsg> getAllUpdates();
-	void cleanupBuffer();
-};
 
 /**
  * CLASS NAME: MP1Node
@@ -185,13 +69,13 @@ public:
 
 	// node messaging
 	bool recvCallBack(char *, int );
-	bool recvJoinReq(MessageHdr &);
+	bool recvJoinReq(Message &);
 	bool sendJoinReq(Address &);
-	bool recvJoinAck(MessageHdr &);
+	bool recvJoinAck(Message &);
 	bool sendJoinAck(Address &);
-	bool recvPingReq(MessageHdr &);
+	bool recvPingReq(Message &);
 	bool sendPingReq(Address &, Address &);
-	bool recvPingAck(MessageHdr &);
+	bool recvPingAck(Message &);
 	bool sendPingAck(Address &, Address &);
 
 	// node helper functions
@@ -209,8 +93,8 @@ public:
 	bool addForward(Address&, Address&);
 	Address removeForward(Address&);
 	int getPiggybackCount();
-	void attachUpdates(MessageHdr &, int);
-	void loadMemberList(MessageHdr &, std::vector<MemberListEntry>&);
+	void attachUpdates(Message &, int);
+	void loadMemberList(Message &, std::vector<MemberListEntry>&);
 	int isNullAddress(Address &);
 	Address getJoinAddress();
 	void printAddress(Address &);

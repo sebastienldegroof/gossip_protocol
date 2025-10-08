@@ -7,12 +7,6 @@
  *  Starter code template
  **********************************/
 
-#define HEADER_SIZE 10  // Number of updates piggybacked on a message
-#define REPEAT_UPDATE 3 // Number of times an update will be piggybacked
-#define DEAD_COUNTER 1  // Number of time periods before declaring a node dead
-#define K_NEIGHBORS 3   // Number of other nodes to send indirect PINGREQ to
-
-#include <sstream>
 #include "MP1Node.h"
 
 /**
@@ -104,7 +98,7 @@ int MP1Node::initThisNode(Address &joinaddr)
     memberNode->bFailed = false;
     memberNode->inited = true;
     memberNode->inGroup = false;
-    memberNode->timeOutCounter = DEAD_COUNTER;
+    memberNode->timeOutCounter = constants::DEAD_COUNTER;
     initMemberListTable(memberNode);
     // node is up!
 
@@ -169,7 +163,7 @@ int MP1Node::finishUpThisNode()
             continue;
         }
 
-        MessageHdr msg{MessageHdr(memberNode->addr, destAddr, JOINACK, timestamp, 1)};
+        Message msg{Message(memberNode->addr, destAddr, JOINACK, timestamp, 1)};
         msg.piggyBack[0] = UpdateMsg(memberNode->addr, FAIL, updateTimestamp);
         int msgSize{msg.msgSize()};
         char *msgData{new char[msgSize]{}};
@@ -327,13 +321,13 @@ void MP1Node::nodeLoopOps()
     {
         // create list of K unique neighbors to pingreq
         int k{0};
-        if ((int)memberNode->memberList.size() < K_NEIGHBORS + 2) // adding two so we dont count ourself or the target
+        if ((int)memberNode->memberList.size() < constants::K_NEIGHBORS + 2) // adding two so we dont count ourself or the target
         {
             k = (int)memberNode->memberList.size() - 2;
         }
         else
         {
-            k = K_NEIGHBORS;
+            k = constants::K_NEIGHBORS;
         }
         Address k_neighbors[k]{};
 
@@ -415,7 +409,7 @@ bool MP1Node::recvCallBack(char *msgData, int size)
      * Constructor reads the char array and creates
      * a MessgeHdr object
      */
-    MessageHdr msg{MessageHdr(msgData, size)};
+    Message msg{Message(msgData, size)};
 
     /**
      * Every event (sending or receiving) causes the
@@ -467,7 +461,7 @@ bool MP1Node::recvCallBack(char *msgData, int size)
  * The new node needs to synchronize their Lamport clock and
  * membership list, so those will be sent back in the reply.
  */
-bool MP1Node::recvJoinReq(MessageHdr &msg)
+bool MP1Node::recvJoinReq(Message &msg)
 {
     addMember(msg.srcAddr);
     return sendJoinAck(msg.srcAddr);
@@ -484,7 +478,7 @@ bool MP1Node::sendJoinReq(Address &joinAddress)
 {
     timestamp++; // Sending message, so increment
 
-    MessageHdr msg{MessageHdr(memberNode->addr, joinAddress, JOINREQ, timestamp, 0)};
+    Message msg{Message(memberNode->addr, joinAddress, JOINREQ, timestamp, 0)};
 
     int msgSize{msg.msgSize()};
     char *msgData{new char[msgSize]{}};
@@ -506,7 +500,7 @@ bool MP1Node::sendJoinReq(Address &joinAddress)
  * FAIL update about themselves. That update is received and processed
  * in the recvCallBack.
  */
-bool MP1Node::recvJoinAck(MessageHdr &msg)
+bool MP1Node::recvJoinAck(Message &msg)
 {
     if (msg.updateCount > 0)
     {
@@ -534,7 +528,7 @@ bool MP1Node::sendJoinAck(Address &newNodeAddress)
 {
     timestamp++; // Sending message, so increment
 
-    MessageHdr msg{MessageHdr(memberNode->addr, newNodeAddress, JOINACK, timestamp, memberNode->memberList.size())};
+    Message msg{Message(memberNode->addr, newNodeAddress, JOINACK, timestamp, memberNode->memberList.size())};
     loadMemberList(msg, memberNode->memberList);
 
     int msgSize{msg.msgSize()};
@@ -553,7 +547,7 @@ bool MP1Node::sendJoinAck(Address &newNodeAddress)
  * The targetAddress field in a PINGREQ will determine if
  * the ping is direct or indirect.
  */
-bool MP1Node::recvPingReq(MessageHdr &msg)
+bool MP1Node::recvPingReq(Message &msg)
 {
     if (msg.dstAddr == msg.piggyBack[0].nodeAddress)
     {
@@ -591,7 +585,7 @@ bool MP1Node::sendPingReq(Address &destAddr, Address &targetAddr)
     timestamp++; // sending message, so increment
 
     int updateCount = getPiggybackCount();
-    MessageHdr msg{MessageHdr(memberNode->addr, destAddr, PINGREQ, timestamp, updateCount)};
+    Message msg{Message(memberNode->addr, destAddr, PINGREQ, timestamp, updateCount)};
     msg.piggyBack[0] = UpdateMsg(targetAddr);
     attachUpdates(msg, updateCount);
 
@@ -618,7 +612,7 @@ bool MP1Node::sendPingReq(Address &destAddr, Address &targetAddr)
  * 4. The PingAck was a reply to another ping that we forwarded
  *    -> forward pingack to original requester
  */
-bool MP1Node::recvPingAck(MessageHdr &msg)
+bool MP1Node::recvPingAck(Message &msg)
 {
     bool result = false;
     /**
@@ -657,7 +651,7 @@ bool MP1Node::sendPingAck(Address &destAddr, Address &targetAddr)
     timestamp++; // sending message, so increment
 
     int updateCount{getPiggybackCount()};
-    MessageHdr msg{MessageHdr(memberNode->addr, destAddr, PINGACK, timestamp, updateCount)};
+    Message msg{Message(memberNode->addr, destAddr, PINGACK, timestamp, updateCount)};
     msg.piggyBack[0] = UpdateMsg(targetAddr);
     attachUpdates(msg, updateCount);
 
@@ -1091,13 +1085,13 @@ bool MP1Node::removeDead(Address &deadAddr, long msgTimestamp)
 int MP1Node::getPiggybackCount()
 {
     int sumUpdates = updateBuffer.getUpdateCount() + memberNode->memberList.size() - 1;
-    if (sumUpdates < HEADER_SIZE)
+    if (sumUpdates < constants::MESSAGE_SIZE)
     {
         return sumUpdates;
     }
     else
     {
-        return HEADER_SIZE;
+        return constants::MESSAGE_SIZE;
     }
 }
 
@@ -1109,7 +1103,7 @@ int MP1Node::getPiggybackCount()
  * message, the node will add ALIVE updates for the nodes
  * in its memberlist
  */
-void MP1Node::attachUpdates(MessageHdr &msg, int numUpdates)
+void MP1Node::attachUpdates(Message &msg, int numUpdates)
 {
     int i_p{0};                             // piggyback index
     int i_m{0};                             // memberlist index
@@ -1147,7 +1141,7 @@ void MP1Node::attachUpdates(MessageHdr &msg, int numUpdates)
  * Intended to be used for a JOINACK message. The message must be initialized correctly
  * with the same number of piggyback messages as MemberListEntries.
  */
-void MP1Node::loadMemberList(MessageHdr &msg, std::vector<MemberListEntry> &memberList)
+void MP1Node::loadMemberList(Message &msg, std::vector<MemberListEntry> &memberList)
 {
     if (msg.updateCount != (int)memberList.size())
     {
@@ -1211,543 +1205,4 @@ void MP1Node::setFailed(bool nFailed)
 Address MP1Node::getAddress() const
 {
     return memberNode->addr;
-}
-
-/**
- * STRUCT NAME: MessageHdr
- */
-
-/**
- * MessageHdr overloaded constructors
- */
-MessageHdr::MessageHdr(Address &s, Address &d, MsgType t, long ts, int c)
-    : srcAddr(s), dstAddr(d), msgType(t), timestamp(ts), updateCount(c)
-{
-    if (c > 0)
-    {
-        piggyBack = new UpdateMsg[c]{};
-    }
-    else
-    {
-        piggyBack = nullptr;
-    }
-}
-MessageHdr::MessageHdr(int c)
-    : srcAddr(), dstAddr(), msgType(JOINREQ), timestamp(0), updateCount(c)
-{
-    if (c > 0)
-    {
-        piggyBack = new UpdateMsg[c]{};
-    }
-    else
-    {
-        piggyBack = nullptr;
-    }
-}
-MessageHdr::MessageHdr()
-    : srcAddr(), dstAddr(), msgType(JOINREQ), timestamp(0), updateCount(0)
-{
-    piggyBack = nullptr;
-}
-MessageHdr::MessageHdr(char *msgData, int msgSize)
-{
-    srcAddr = Address();
-    dstAddr = Address();
-    int index{0};
-    memcpy(&(srcAddr.addr), msgData + index, sizeof(srcAddr.addr));
-    index += sizeof(srcAddr.addr);
-    memcpy(&(dstAddr.addr), msgData + index, sizeof(dstAddr.addr));
-    index += sizeof(dstAddr.addr);
-    memcpy(&msgType, msgData + index, sizeof(msgType));
-    index += sizeof(msgType);
-    memcpy(&timestamp, msgData + index, sizeof(timestamp));
-    index += sizeof(timestamp);
-    memcpy(&updateCount, msgData + index, sizeof(updateCount));
-    index += sizeof(updateCount);
-
-    if (updateCount > 0)
-    {
-        piggyBack = new UpdateMsg[updateCount]{};
-        int addrSize{sizeof(piggyBack[0].nodeAddress.addr)};
-        int stateSize{sizeof(piggyBack[0].nodeState)};
-        int tsSize{sizeof(piggyBack[0].timestamp)};
-        for (int i = 0; i < updateCount; i++)
-        {
-            memcpy(&(piggyBack[i].nodeAddress.addr), msgData + index, addrSize);
-            index += addrSize;
-            memcpy(&(piggyBack[i].nodeState), msgData + index, stateSize);
-            index += stateSize;
-            memcpy(&(piggyBack[i].timestamp), msgData + index, tsSize);
-            index += tsSize;
-        }
-    }
-    else
-    {
-        piggyBack = nullptr;
-    }
-}
-
-/**
- * MessageHdr destructor
- */
-MessageHdr::~MessageHdr()
-{
-    delete[] piggyBack;
-}
-
-/**
- *  MessageHdr copy constructor
- */
-MessageHdr::MessageHdr(const MessageHdr &other)
-    : srcAddr(other.srcAddr), dstAddr(other.dstAddr), msgType(other.msgType), timestamp(other.timestamp), updateCount(other.updateCount)
-{
-    piggyBack = new UpdateMsg[other.updateCount];
-    for (int i = 0; i < other.updateCount; i++)
-    {
-        piggyBack[i] = other.piggyBack[i];
-    }
-}
-
-/**
- * MessageHdr copy assignment operator
- */
-MessageHdr &MessageHdr::operator=(const MessageHdr &other)
-{
-    if (this != &other)
-    {
-        delete[] piggyBack;
-        this->srcAddr = other.srcAddr;
-        this->dstAddr = other.dstAddr;
-        this->msgType = other.msgType;
-        this->timestamp = other.timestamp;
-        this->updateCount = other.updateCount;
-        this->piggyBack = new UpdateMsg[other.updateCount];
-        for (int i = 0; i < other.updateCount; i++)
-        {
-            piggyBack[i] = other.piggyBack[i];
-        }
-    }
-    return *this;
-}
-
-/**
- * MessageHdr move constructor
- */
-MessageHdr::MessageHdr(MessageHdr &&other) noexcept
-    : srcAddr(other.srcAddr), dstAddr(other.dstAddr), msgType(other.msgType), timestamp(other.timestamp), updateCount(other.updateCount)
-{
-    piggyBack = other.piggyBack;
-    other.piggyBack = nullptr;
-}
-
-/**
- * MessageHdr move assignment operator
- */
-MessageHdr &MessageHdr::operator=(MessageHdr &other) noexcept
-{
-    if (this != &other)
-    {
-        delete[] piggyBack;
-        this->srcAddr = other.srcAddr;
-        this->dstAddr = other.dstAddr;
-        this->msgType = other.msgType;
-        this->timestamp = other.timestamp;
-        this->updateCount = other.updateCount;
-        this->piggyBack = other.piggyBack;
-        other.piggyBack = nullptr;
-    }
-    return *this;
-}
-
-/**
- * FUNCTION NAME: msgSize
- *
- * DESCRIPTION: returns the byte size of the object when serialized
- * into a char array. Used when serializing a MessageHdr and allocating
- * the correct buffer size, including the piggyback UpdateMsgs.
- */
-int MessageHdr::msgSize()
-{
-    int headersize{sizeof(srcAddr.addr) + sizeof(dstAddr.addr) + sizeof(msgType) + sizeof(timestamp) + sizeof(updateCount)};
-    int updateMsgSize{0};
-    if (updateCount > 0)
-    {
-        updateMsgSize = piggyBack[0].msgSize();
-    }
-    return headersize + (updateMsgSize * updateCount);
-}
-
-/**
- * FUNCTION NAME: serialize
- *
- * DESCRIPTION: copies the MessageHdr data (with member UpdateMsgs)
- * into a provided char array. The char array is provided to the
- * function and should be the correct size by using the member
- * msgSize() function beforehand.
- */
-void MessageHdr::serialize(char *msgData, int msgSize)
-{
-    int index{0};
-
-    memcpy(msgData + index, &(srcAddr.addr), sizeof(srcAddr.addr));
-    index += sizeof(srcAddr.addr);
-    memcpy(msgData + index, &(dstAddr.addr), sizeof(dstAddr.addr));
-    index += sizeof(dstAddr.addr);
-    memcpy(msgData + index, &msgType, sizeof(msgType));
-    index += sizeof(msgType);
-    memcpy(msgData + index, &timestamp, sizeof(timestamp));
-    index += sizeof(timestamp);
-    memcpy(msgData + index, &updateCount, sizeof(updateCount));
-    index += sizeof(updateCount);
-
-    if (updateCount > 0)
-    {
-        int updateMsgSize = piggyBack[0].msgSize();
-        for (int i = 0; i < updateCount; i++)
-        {
-            piggyBack[i].serialize(msgData + index, updateMsgSize);
-            index += updateMsgSize;
-        }
-    }
-}
-
-/**
- * STRUCT NAME: UpdateMsg
- */
-
-/**
- * UpdateMsg overloaded constructors
- */
-UpdateMsg::UpdateMsg(Address &addr, MemberState state, long ts)
-    : nodeAddress(addr), nodeState(state), timestamp(ts) {}
-UpdateMsg::UpdateMsg(Address &addr)
-    : nodeAddress(addr), nodeState(ALIVE), timestamp(0) {}
-UpdateMsg::UpdateMsg()
-    : nodeAddress(), nodeState(ALIVE), timestamp(0) {}
-
-/**
- *  UpdateMsg Destructor
- */
-UpdateMsg::~UpdateMsg() {}
-
-/**
- * UpdateMsg copy constructor
- */
-UpdateMsg::UpdateMsg(const UpdateMsg &other)
-    : nodeAddress(other.nodeAddress), nodeState(other.nodeState), timestamp(other.timestamp) {}
-
-/**
- * UpdateMsg copy assignment operator
- */
-UpdateMsg &UpdateMsg::operator=(const UpdateMsg &other)
-{
-    if (this != &other)
-    {
-        this->nodeAddress = other.nodeAddress;
-        this->nodeState = other.nodeState;
-        this->timestamp = other.timestamp;
-    }
-    return *this;
-}
-
-/**
- * UpdateMsg move constructor
- */
-UpdateMsg::UpdateMsg(UpdateMsg &&other) noexcept
-    : nodeAddress(other.nodeAddress), nodeState(other.nodeState), timestamp(other.timestamp) {}
-
-/**
- * UpdateMsg move assignment operator
- */
-UpdateMsg &UpdateMsg::operator=(UpdateMsg &other) noexcept
-{
-    if (this != &other)
-    {
-        this->nodeAddress = other.nodeAddress;
-        this->nodeState = other.nodeState;
-        this->timestamp = other.timestamp;
-    }
-    return *this;
-}
-
-/**
- * UpdateMsg overloaded equality operator
- */
-bool UpdateMsg::operator==(const UpdateMsg &anotherMsg) const
-{
-    if (this->nodeAddress != anotherMsg.nodeAddress)
-    {
-        return false;
-    }
-    if (this->nodeState != anotherMsg.nodeState)
-    {
-        return false;
-    }
-    if (this->timestamp != anotherMsg.timestamp)
-    {
-        return false;
-    }
-    return true;
-}
-
-/**
- * UpdateMsg overloaded inequality operator
- */
-bool UpdateMsg::operator!=(const UpdateMsg &anotherMsg) const
-{
-    if (this->nodeAddress != anotherMsg.nodeAddress)
-    {
-        return true;
-    }
-    if (this->nodeState != anotherMsg.nodeState)
-    {
-        return true;
-    }
-    if (this->timestamp != anotherMsg.timestamp)
-    {
-        return true;
-    }
-    return false;
-}
-
-/**
- * FUNCTION NAME: msgSize
- *
- * DESCRIPTION: returns the byte size of the object when serialized
- * into a char array. Used when serializing a MessageHdr and allocating
- * the correct buffer size.
- */
-int UpdateMsg::msgSize()
-{
-    return sizeof(nodeAddress.addr) + sizeof(nodeState) + sizeof(timestamp);
-}
-
-/**
- * FUNCTION NAME: serialize
- *
- * DESCRIPTION: copies the UpdateMsg data into a provided char array.
- * The char array is provided to the function and should be the correct
- * size by using the member msgSize() function beforehand.
- */
-void UpdateMsg::serialize(char *msgData, int msgSize)
-{
-    int index = 0;
-
-    memcpy(msgData + index, &nodeAddress.addr, sizeof(nodeAddress.addr));
-    index += sizeof(nodeAddress.addr);
-    memcpy(msgData + index, &nodeState, sizeof(nodeState));
-    index += sizeof(nodeState);
-    memcpy(msgData + index, &timestamp, sizeof(timestamp));
-    index += sizeof(timestamp);
-}
-
-/**
- * CLASS NAME: UpdateBuffer
- */
-
-/**
- * UpdateBuffer overloaded constructors
- */
-UpdateBuffer::UpdateBuffer()
-    : maxUpdates(HEADER_SIZE), maxSent(REPEAT_UPDATE), updateBuffer(0) {}
-UpdateBuffer::UpdateBuffer(int max)
-    : maxUpdates(max), maxSent(REPEAT_UPDATE), updateBuffer(0) {}
-UpdateBuffer::UpdateBuffer(int maxU, int maxS)
-    : maxUpdates(maxU), maxSent(maxS), updateBuffer(0) {}
-
-/**
- * UpdateBuffer copy constructor
- */
-UpdateBuffer::UpdateBuffer(const UpdateBuffer &other)
-    : maxUpdates(other.maxUpdates), maxSent(other.maxSent), updateBuffer(other.updateBuffer) {}
-
-/**
- * UpdateBuffer copy assignment operator
- */
-UpdateBuffer &UpdateBuffer::operator=(const UpdateBuffer &other)
-{
-    if (this != &other)
-    {
-        this->maxUpdates = other.maxUpdates;
-        this->maxSent = other.maxSent;
-        this->updateBuffer = other.updateBuffer;
-    }
-    return *this;
-}
-
-/**
- * UpdateBuffer move constructor
- */
-UpdateBuffer::UpdateBuffer(UpdateBuffer &&other) noexcept
-    : maxUpdates(other.maxUpdates), maxSent(other.maxSent), updateBuffer(other.updateBuffer) {}
-
-/**
- * UpdateBuffer move assignment operator
- */
-UpdateBuffer &UpdateBuffer::operator=(UpdateBuffer &other) noexcept
-{
-    if (this != &other)
-    {
-        this->maxUpdates = other.maxUpdates;
-        this->maxSent = other.maxSent;
-        this->updateBuffer = other.updateBuffer;
-    }
-    return *this;
-}
-
-/**
- * FUNCTION NAME: getUpdateCount
- *
- * DESCRIPTION: Returns the number of updates that the
- * buffer wants to send out on piggyback
- */
-int UpdateBuffer::getUpdateCount()
-{
-    if ((int)updateBuffer.size() <= maxUpdates)
-    {
-        return updateBuffer.size();
-    }
-    else
-    {
-        return maxUpdates;
-    }
-}
-
-/**
- * FUNCTION NAME: cleanupBuffer
- *
- * DESCRIPTION: Removes updates that have been sent out more
- * than the maxSent threshold, and reorders the list based
- * on timestamp (oldest first). Only keeps the most recent
- * update for each node.
- *
- * Making use of the STL to keep this code more optimized
- * than the rest of my garbage.
- *
- * A map would be a way better data structure for my buffer
- * but I cant create a hash operator for Address struct so
- * here we are...
- */
-void UpdateBuffer::cleanupBuffer()
-{
-    // Remove updates that have been sent more than max times
-    auto endIter = std::remove_if(updateBuffer.begin(), updateBuffer.end(),
-                                  [&](const std::pair<UpdateMsg, short> n)
-                                  { return n.second >= maxSent; });
-    if (endIter != updateBuffer.end())
-    {
-        updateBuffer.erase(endIter, updateBuffer.end());
-    }
-
-    // Sort the buffer by address (ascending) then timestamp (descending)
-    std::sort(updateBuffer.begin(), updateBuffer.end(),
-              [](const std::pair<UpdateMsg, short> &a, const std::pair<UpdateMsg, short> &b)
-              {
-                  if (a.first.nodeAddress == b.first.nodeAddress)
-                      return a.first.timestamp > b.first.timestamp;
-                  else
-                      return a.first.nodeAddress.toString() < b.first.nodeAddress.toString();
-              });
-
-    std::vector<std::pair<UpdateMsg, short>> newBuffer;
-    // Copy only the latest (first) update to the new buffer
-    std::unique_copy(updateBuffer.begin(), updateBuffer.end(), std::back_inserter(newBuffer),
-                     [](const std::pair<UpdateMsg, short> &a, const std::pair<UpdateMsg, short> &b)
-                     { return a.first.nodeAddress == b.first.nodeAddress; });
-
-    updateBuffer = newBuffer;
-}
-
-/**
- * FUNCTION NAME: insertUpdatesFromMsg
- *
- * DESCRIPTION: the node has received updates and needs to add
- * them to the update buffer for future processing. Checks that
- * the update hasn't already been received before adding to the
- * buffer.
- */
-void UpdateBuffer::insertUpdatesFromMsg(MessageHdr &msg)
-{
-    int i{0};
-    if (msg.msgType == PINGACK || msg.msgType == PINGREQ)
-    {
-        i = 1;
-    }
-    while (i < msg.updateCount)
-    {
-        if (!(this->contains(msg.piggyBack[i])))
-        {
-            updateBuffer.push_back(std::pair<UpdateMsg, short>{msg.piggyBack[i], 0});
-        }
-        i++;
-    }
-    cleanupBuffer();
-}
-
-/**
- * FUNCTION NAME: insertUpdate
- *
- * DESCRIPTION: adds a single update message to the buffer
- * The cleanup after every insert is excessive and should be optimized,
- * but we can save that for later...
- */
-void UpdateBuffer::insertUpdate(UpdateMsg update)
-{
-    if (!(this->contains(update)))
-    {
-        updateBuffer.push_back(std::pair<UpdateMsg, short>{update, 0});
-        cleanupBuffer();
-    }
-}
-
-/**
- * FUNCTION NAME: contains
- *
- * DESCRIPTION: Checks the buffer if it contains an UpdateMsg
- * for a node that is newer than the one being checked.
- */
-bool UpdateBuffer::contains(UpdateMsg &msg)
-{
-    for (int i = 0; i < (int)updateBuffer.size(); i++)
-    {
-        if (updateBuffer.at(i).first.nodeAddress == msg.nodeAddress)
-        {
-            if (updateBuffer.at(i).first.timestamp >= msg.timestamp)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-    }
-    return false;
-}
-
-/**
- * FUNCTION NAME: getAllUpdates
- *
- * DESCRIPTION: Returns a vector with all updates in the buffer
- */
-std::vector<UpdateMsg> UpdateBuffer::getAllUpdates()
-{
-    std::vector<UpdateMsg> updateVector(updateBuffer.size());
-    for (int i{0}; i < (int)updateBuffer.size(); i++)
-    {
-        updateVector.at(i) = updateBuffer.at(i).first;
-    }
-    return updateVector;
-}
-
-/**
- * FUNCTION NAME: at
- *
- * DESCRIPTION: retrieves the UpdateMsg at the index of the
- * provided parameter. Also increments the send counter
- */
-UpdateMsg UpdateBuffer::at(int i)
-{
-    updateBuffer.at(i).second++;
-    return updateBuffer.at(i).first;
 }
